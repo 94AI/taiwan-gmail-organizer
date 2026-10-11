@@ -1,0 +1,35 @@
+{
+  "schema_version": 2,
+  "policy_version": 1,
+  "language": "zh-TW",
+  "timezone": "Asia/Taipei",
+  "expected_account_email": null,
+  "preferred_mode": "preview",
+  "batch_size": 25,
+  "important_mail": "actionable_only",
+  "pending_label": "none",
+  "protected_message_ids": [],
+  "keep_inbox_message_ids": [],
+  "bank_successful_login_notices": "keep",
+  "statements": {
+    "bank": {"monthly": "keep_and_classify", "daily": "keep"},
+    "futures": {"monthly": "keep_and_classify", "daily": "keep"},
+    "securities": {"monthly": "keep_and_classify", "daily": "keep"}
+  },
+  "label_preferences": {
+    "credit_card_statement": "財務帳單／信用卡月對帳單",
+    "bank_statement": "財務帳單／銀行綜合對帳單",
+    "futures_statement": "財務帳單／期貨月對帳單",
+    "securities_statement": "財務帳單／證券月對帳單",
+    "invoice_or_receipt": "財務帳單／電子發票與收據",
+    "donation_record": "財務帳單／捐款收據與扣款紀錄",
+    "refund_or_payment_issue": "財務帳單／退款與付款異常",
+    "course_purchase_or_access": "線上課程／購買與權限紀錄",
+    "google_notice": "Google 通知",
+    "account_record": "行銷與網站／網站及帳戶管理",
+    "security_record": "帳號安全與登入紀錄",
+    "shopping_record": "購物與售後服務",
+    "financial_notice": "金融機構／重要通知",
+    "personal_application": "個人文件與申辦紀錄"
+  }
+}
