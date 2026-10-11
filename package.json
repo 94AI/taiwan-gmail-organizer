@@ -1,0 +1,13 @@
+{
+  "name": "taiwan-gmail-organizer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Traditional Chinese Gmail organizing workflow for Codex, with Taiwan-specific rules.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node tests/workflow.test.cjs && node tests/bridge.test.cjs"
+  }
+}

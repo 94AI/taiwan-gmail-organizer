@@ -1,0 +1,23 @@
+# Private preferences, mail data and execution logs
+.local/
+private/
+logs/
+work/
+*.log
+
+# Credentials and local environment files
+.env
+.env.*
+!.env.example
+credentials*.json
+token*.json
+*oauth*.json
+*.pem
+*.key
+
+# Runtime and OS files
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+.DS_Store
