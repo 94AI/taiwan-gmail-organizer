@@ -1,0 +1,4 @@
+interface:
+  display_name: "台灣 Gmail 整理助理"
+  short_description: "一次啟動分批整理 Gmail，保存進度並查漏，重要信保留收件匣"
+  default_prompt: "使用 $taiwan-gmail-organizer，依工作區私人設定與目前授權整理 Gmail，一次做到完成；未授權修改時先預覽。"
