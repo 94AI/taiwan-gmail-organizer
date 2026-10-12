@@ -64,3 +64,19 @@ text(await runner.executeBatch());
 queued → planned → inflight → verified；preview 不執行修改，記為 previewed；外部變動或重試上限記為 exception。JSON 在外部修改前保存，寫入暫存檔成功後原子替換，重新載入按 25 封切片，避免輸出過大。
 
 程式檢查依賴模型提供的分類與內容證據旗標，能阻擋違反分類／授權規則的動作，不能保證模型永遠分類正確。少量不確定郵件保留，不能為提高刪除數量猜測內容。
+
+## 預覽與完成報告
+
+每批及最後查核後使用 `text(runner.report())` 取得只含統計的報告。`recommended` 是內容判斷的建議；`successful_changes` 只計已核對且實際狀態改變的郵件。`classified` 是已核對新增分類標籤的不同郵件數；它可能與封存數重疊，不能相加作為總處理封數。待辦、內容不確定與例外分別列出，不自行推定已完成。
+
+`final_check` 缺少時顯示尚未查核；未讀數為 null 時顯示未取得。`final_check.issues` 按郵件去重，執行中新信另列，不混入原清單。先前成功操作後又被使用者手動更改，仍保留操作歷史，但目前狀態必須按查核事項說明。
+
+聚合報告不含帳號、郵件 ID、標籤名稱或自由文字理由。逐封待辦仍在私人進度中，由已授權的助理依實際內容整理回報，不放到公開文件。
+
+可在自己的工作資料夾離線產生 Markdown：
+
+```sh
+node .agents/skills/taiwan-gmail-organizer/scripts/report.cjs work/gmail-agent/current-run.json
+```
+
+此指令只讀指定本地檔案，不呼叫 Gmail 或寫入進度；它顯示進度中的最後查核結果，不代表重新查詢了 Gmail。
