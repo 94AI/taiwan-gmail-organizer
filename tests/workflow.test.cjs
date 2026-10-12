@@ -53,6 +53,7 @@ test("all 231 IDs paginated, deduplicated, archived in 25-message batches", asyn
   for (;;) { const ms = await r.nextBatch(); if (!ms.length) break; assert(ms.length <= 25); await r.plan(ms.map(m => archive(m.id))); await r.executeBatch(); batches++; }
   const result = await r.audit(); assert.equal(result.inventory, 231); assert.equal(result.changed.archive, 231);
   assert.equal(result.stage, "completed_snapshot"); assert.equal(batches, 10);
+  assert.equal(r.report().successful_changes.archive, 231); assert.equal(r.report().classified, 231);
   assert(Object.values(f.box).every(m => m.label_ids.includes("UNREAD") && !m.label_ids.includes("INBOX") && m.label_ids.includes("L")));
 });
 test("account mismatch blocks before inventory and mutation", async () => {
@@ -62,6 +63,7 @@ test("account mismatch blocks before inventory and mutation", async () => {
 test("preview remains read-only even if preferences/requested authorization permit writes", async () => {
   const f = fixture(), r = f.runner({ mode: "preview" }); await r.start(); await r.nextBatch(); await r.plan([trash("0")]);
   await assert.rejects(() => r.executeBatch(), /Preview/); assert.equal(f.mutations(), 0); assert.equal((await r.audit()).stage, "preview_complete");
+  assert.equal(r.report().recommended.trash, 1); assert.equal(r.report().successful_changes.trash, 0);
 });
 test("monthly statements and securities daily reports cannot be trashed", async () => {
   const f = fixture(), r = f.runner(); await r.start(); await r.nextBatch();
