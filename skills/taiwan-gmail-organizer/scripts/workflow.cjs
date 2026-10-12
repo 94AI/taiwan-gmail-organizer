@@ -14,6 +14,74 @@ function data(r) {
   return r.structuredContent || r;
 }
 
+// Aggregate-only: no account, mail IDs, label names or model-written reasons.
+function buildReport(state) {
+  const actions = () => ({ archive: 0, trash: 0, inbox: 0, preserve: 0 });
+  const result = { mode: state?.mode ?? null, stage: state?.stage ?? "not_started", inventory: 0,
+    reviewed: 0, recommended: actions(), successful_changes: actions(), classified: 0,
+    retained_without_changes: 0, attention: { actionable: 0, uncertain: 0 },
+    pending: { queued: 0, planned: 0, inflight: 0, exceptions: 0 }, final_check: null };
+  if (!state) return result;
+  if (!Array.isArray(state.order) || !state.records || typeof state.records !== "object")
+    throw new Error("Invalid checkpoint: inventory and records required");
+  const ids = unique(state.order);
+  result.inventory = ids.length;
+  for (const id of ids) {
+    const r = state.records[id];
+    if (!r || !["queued", "planned", "inflight", "previewed", "verified", "exception"].includes(r.status))
+      throw new Error("Invalid checkpoint: missing record or unknown status");
+    const d = r.decision;
+    if (r.status === "exception") result.pending.exceptions++;
+    else if (Object.hasOwn(result.pending, r.status)) result.pending[r.status]++;
+    if (d) {
+      if (!Object.hasOwn(result.recommended, d.action)) throw new Error("Invalid decision action");
+      result.reviewed++; result.recommended[d.action]++;
+      if (d.requires_action || ["financial_risk", "security_alert", "account_deletion", "rights_action"].includes(d.category))
+        result.attention.actionable++;
+      if (d.category === "uncertain") result.attention.uncertain++;
+    }
+    if (r.status === "verified" && state.mode === "execute") {
+      if (!d || !Array.isArray(r.before) || !Array.isArray(r.expected))
+        throw new Error("Invalid verified record: original and expected labels required");
+      if (same(r.before, r.expected)) result.retained_without_changes++;
+      else result.successful_changes[d.action]++;
+      if ((d.label_ids || []).some(label => !r.before.includes(label))) result.classified++;
+    }
+  }
+  if (state.audit) {
+    const a = state.audit;
+    const issueIds = unique([...(a.unfinished || []), ...(a.unexpected_inbox || []),
+      ...(a.missing_important || []), ...(a.protected_missing || []), ...(a.current_state_mismatches || [])]);
+    result.final_check = { inbox_messages: a.inbox_messages ?? null, inbox_unread: a.inbox_unread ?? null,
+      issues: issueIds.length, new_mail: unique(a.new_message_ids || []).length };
+  }
+  return result;
+}
+
+function formatReport(report) {
+  const number = n => Number.isSafeInteger(n) && n >= 0 ? String(n) : "未取得";
+  const stages = { not_started: "尚未開始", review: "整理中", needs_review: "需要查核",
+    permission_blocked: "權限不足，已停止", preview_complete: "預覽完成",
+    completed_with_exceptions: "本輪完成，仍有例外", completed_snapshot: "本輪查核完成" };
+  const rows = [["分類封存", "archive"], ["移到垃圾桶", "trash"], ["留收件匣", "inbox"], ["保留", "preserve"]];
+  const lines = ["# 珍惜生命，遠離廣告信", "", `狀態：${stages[report.stage] || "尚未確認"}`, "",
+    `本輪清單：${number(report.inventory)} 封；已有判斷：${number(report.reviewed)} 封。`, "",
+    report.mode === "preview" ? "## 建議處置（尚未執行）" : "## 本輪判斷", "",
+    "| 處置 | 封數 |", "| --- | ---: |", ...rows.map(([name, key]) => `| ${name} | ${number(report.recommended?.[key])} |`), ""];
+  if (report.mode === "preview") lines.push("這是預覽，實際修改數為 0。", "");
+  else if (report.mode === "execute") lines.push("## 成功核對過的操作", "",
+    `封存：${number(report.successful_changes?.archive)} 封；垃圾桶：${number(report.successful_changes?.trash)} 封；新增分類標籤：${number(report.classified)} 封。`,
+    "操作數按不同郵件計算；同封信加標籤再封存不代表兩封信。", "");
+  lines.push(`需要行動：${number(report.attention?.actionable)} 封；內容不確定：${number(report.attention?.uncertain)} 封。`,
+    `未判斷：${number(report.pending?.queued)} 封；待執行：${number(report.pending?.planned)} 封；待核對：${number(report.pending?.inflight)} 封；例外：${number(report.pending?.exceptions)} 封。`, "");
+  if (report.final_check) lines.push("## 最後查核", "",
+    `收件匣：${number(report.final_check.inbox_messages)} 封；未讀：${number(report.final_check.inbox_unread)} 封。`,
+    `需查核郵件：${number(report.final_check.issues)} 封；執行中新來信：${number(report.final_check.new_mail)} 封。`,
+    "以上操作數記錄先前成功核對的結果；後續人工變更另列為查核事項。", "");
+  else lines.push("尚未完成最後查核，收件匣與未讀數未取得。", "");
+  return lines.join("\n");
+}
+
 function createRunner({ api, persist, policy, mode = "preview", authorization = [], state = null }) {
   if (!api || typeof persist !== "function") throw new Error("Gmail adapter and durable persistence required");
   if (!["preview", "execute"].includes(mode)) throw new Error("Invalid mode");
@@ -215,7 +283,8 @@ function createRunner({ api, persist, policy, mode = "preview", authorization = 
       mode === "preview" ? "preview_complete" : Object.values(s.records).some(r => r.status === "exception") ? "completed_with_exceptions" : "completed_snapshot";
     await save(); return summary();
   }
-  return { start, nextBatch, plan, executeBatch, audit, summary, state: () => JSON.parse(JSON.stringify(s)) };
+  return { start, nextBatch, plan, executeBatch, audit, summary, report: () => buildReport(s),
+    state: () => JSON.parse(JSON.stringify(s)) };
 }
 
-module.exports = { createRunner };
+module.exports = { createRunner, buildReport, formatReport };
